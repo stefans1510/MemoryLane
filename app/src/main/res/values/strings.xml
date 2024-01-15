@@ -18,6 +18,6 @@
     <string name="add_new_place">New PLace</string>
     <string name="edit_place">Edit Place</string>
 
-    <string name="google_maps_api_key">AIzaSyApHKZdzWbWkFxoo5NnDOKAr_EtPIVXMVc</string>
+    <string name="google_maps_api_key"></string>
     <string name="place_actions">Place Actions</string>
 </resources>
