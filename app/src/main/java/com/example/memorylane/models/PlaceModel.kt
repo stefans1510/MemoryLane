@@ -2,6 +2,7 @@ package com.example.memorylane.models
 
 data class PlaceModel(
     val id: Int,
+    val creatorId: Int,
     val title: String,
     val image: String,
     val description: String,

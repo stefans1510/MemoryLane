@@ -13,37 +13,28 @@ import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.location.Geocoder
 import android.location.LocationManager
-import android.location.LocationRequest
 import android.net.Uri
-import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
 import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
-import androidx.appcompat.widget.AppCompatImageView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.example.memorylane.R
+import com.example.memorylane.databinding.ActivityAddPlaceBinding
 import com.example.memorylane.models.PlaceModel
 import com.example.memorylane.viewmodels.PlaceViewModel
+import com.example.memorylane.viewmodels.UserViewModel
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
-import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest
-import com.google.android.libraries.places.api.net.FindCurrentPlaceResponse
-import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.android.libraries.places.widget.Autocomplete
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 import java.io.File
@@ -58,33 +49,28 @@ import java.util.UUID
 
 class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
 
+    private lateinit var binding: ActivityAddPlaceBinding
     private var calendar = Calendar.getInstance()
     private lateinit var dateListener: DatePickerDialog.OnDateSetListener
-    private lateinit var etTitle: EditText
-    private lateinit var etDescription: EditText
-    private lateinit var etLocation: EditText
-    private lateinit var etDate: EditText
-    private lateinit var ivPlaceImage: AppCompatImageView
-    private lateinit var tvAddImageButton: TextView
-    private lateinit var tvSelectCurrentLocation: TextView
-    private lateinit var btnSave: Button
     private lateinit var galleryLauncher: ActivityResultLauncher<Intent>
     private lateinit var cameraLauncher: ActivityResultLauncher<Uri>
-    private lateinit var currentPhotoPath: String
-    private var savedImage: Uri? = null
     private lateinit var placeActivityResultLauncher: ActivityResultLauncher<Intent>
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private var currentPhotoPath: String = ""
+    private var savedImage: Uri? = null
     private var latitude: Double = 0.0
     private var longitude: Double = 0.0
     private lateinit var placeViewModel: PlaceViewModel
+    private lateinit var userViewModel: UserViewModel
     private var placeId: Int = 0
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_add_place)
+        binding = ActivityAddPlaceBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        val toolbar: Toolbar = findViewById(R.id.toolbar_add_place)
+        val toolbar: Toolbar = binding.toolbarAddPlace
         setSupportActionBar(toolbar)
 
         if (supportActionBar != null) {
@@ -96,6 +82,7 @@ class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
         }
 
         placeViewModel = PlaceViewModel(application)
+        userViewModel = UserViewModel(application)
 
         if (!Places.isInitialized()) {
             Places.initialize(
@@ -112,7 +99,7 @@ class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
                     val bitmap = ImageDecoder.decodeBitmap(source)
                     saveImageToInternalStorage(bitmap)
                     savedImage = saveImageToInternalStorage(bitmap)
-                    findViewById<ImageView>(R.id.iv_place_image).setImageBitmap(bitmap)
+                    binding.ivPlaceImage.setImageBitmap(bitmap)
                 } catch (e: IOException) {
                     e.printStackTrace()
                 }
@@ -129,7 +116,7 @@ class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
                     val bitmap = ImageDecoder.decodeBitmap(source)
                     saveImageToInternalStorage(bitmap)
                     savedImage = saveImageToInternalStorage(bitmap)
-                    findViewById<ImageView>(R.id.iv_place_image).setImageBitmap(bitmap)
+                    binding.ivPlaceImage.setImageBitmap(bitmap)
                 } catch (e: IOException) {
                     e.printStackTrace()
                 }
@@ -144,45 +131,29 @@ class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
                     val data = result.data
                     if (data != null) {
                         val place = Autocomplete.getPlaceFromIntent(data)
-                        etLocation.setText(place.name)
+                        binding.etLocation.setText(place.name)
                         // Handle the selected place data as needed (e.g., use it for your PlaceModel)
                         // place.id, place.name, place.address, etc.
                         latitude = place.latLng?.latitude ?: 0.0
                         longitude = place.latLng?.longitude ?: 0.0
                     }
-                } /*else if (result.resultCode == AutocompleteActivity.RESULT_ERROR) {
-
                 }
-                val status = Autocomplete.getStatusFromIntent(data!!)
-                // Handle the error
-                } else if (result.resultCode == Activity.RESULT_CANCELED) {
-                // The user canceled the operation
-                } */
             }
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        
-        dateListener = DatePickerDialog.OnDateSetListener {
-                view, year, month, dayOfMonth ->
+
+        dateListener = DatePickerDialog.OnDateSetListener { view, year, month, dayOfMonth ->
             calendar.set(Calendar.YEAR, year)
             calendar.set(Calendar.MONTH, month)
             calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
             updateDateInView()
         }
 
-        etTitle = findViewById(R.id.et_title)
-        etDescription = findViewById(R.id.et_description)
-        etLocation = findViewById(R.id.et_location)
-        etLocation.setOnClickListener(this)
-        etDate = findViewById(R.id.et_date)
-        etDate.setOnClickListener(this)
-        ivPlaceImage = findViewById(R.id.iv_place_image)
-        tvAddImageButton = findViewById(R.id.tv_add_image)
-        tvAddImageButton.setOnClickListener(this)
-        tvSelectCurrentLocation = findViewById(R.id.tv_select_current_location)
-        tvSelectCurrentLocation.setOnClickListener(this)
-        btnSave = findViewById(R.id.btn_save)
-        btnSave.setOnClickListener(this)
+        binding.etDate.setOnClickListener(this)
+        binding.tvAddImage.setOnClickListener(this)
+        binding.etLocation.setOnClickListener(this)
+        binding.tvSelectCurrentLocation.setOnClickListener(this)
+        binding.btnSave.setOnClickListener(this)
 
         if (intent.hasExtra("PLACE_ID")) {
             placeId = intent.getStringExtra("PLACE_ID")!!.toInt()
@@ -193,36 +164,37 @@ class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
 
             val placeModel = placeViewModel.getPlaceById(placeId)
 
-            etTitle.setText(placeModel!!.title)
-            etDescription.setText(placeModel.description)
-            etDate.setText(placeModel.date)
+            binding.etTitle.setText(placeModel!!.title)
+            binding.etDescription.setText(placeModel.description)
+            binding.etDate.setText(placeModel.date)
             savedImage = Uri.parse(placeModel.image)
-            ivPlaceImage.setImageURI(savedImage)
-            etLocation.setText(placeModel.location)
+            binding.ivPlaceImage.setImageURI(savedImage)
+            binding.etLocation.setText(placeModel.location)
 
-            btnSave.text = "UPDATE PLACE"
+            binding.btnSave.text = "UPDATE PLACE"
         }
-        
+
         updateDateInView() // auto populate field with current date
     }
 
     override fun onClick(v: View?) {
-        when(v!!.id) {
+        when (v!!.id) {
             R.id.et_date -> {
-                DatePickerDialog(this@AddPlaceActivity,
+                DatePickerDialog(
+                    this@AddPlaceActivity,
                     R.style.CustomDatePickerTheme,
                     dateListener,
                     calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH),
-                    calendar.get(Calendar.DAY_OF_MONTH)).show()
+                    calendar.get(Calendar.DAY_OF_MONTH)
+                ).show()
             }
             R.id.tv_add_image -> {
                 val imageDialog = AlertDialog.Builder(this)
                 imageDialog.setTitle("Select Action")
-                val imageDialogItems = arrayOf("Select photo from Gallery","Take a photo")
-                imageDialog.setItems(imageDialogItems) {
-                    dialogOption, which ->
-                    when(which) {
+                val imageDialogItems = arrayOf("Select photo from Gallery", "Take a photo")
+                imageDialog.setItems(imageDialogItems) { dialogOption, which ->
+                    when (which) {
                         0 -> choosePhotoFromGallery()
                         1 -> takePhotoFromCamera()
                     }
@@ -234,8 +206,9 @@ class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
                         Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG,
                         Place.Field.ADDRESS
                     )
-                    val intent = Autocomplete.IntentBuilder(AutocompleteActivityMode.FULLSCREEN, fields)
-                        .build(this@AddPlaceActivity)
+                    val intent =
+                        Autocomplete.IntentBuilder(AutocompleteActivityMode.FULLSCREEN, fields)
+                            .build(this@AddPlaceActivity)
                     placeActivityResultLauncher.launch(intent)
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -274,17 +247,17 @@ class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
             }
             R.id.btn_save -> {
                 when {
-                    etTitle.text.isNullOrEmpty() -> {
+                    binding.etTitle.text.isNullOrEmpty() -> {
                         Toast.makeText(
                             this, "Please enter the title", Toast.LENGTH_SHORT
                         ).show()
                     }
-                    etDescription.text.isNullOrEmpty() -> {
+                    binding.etDescription.text.isNullOrEmpty() -> {
                         Toast.makeText(
                             this, "Please enter description", Toast.LENGTH_SHORT
                         ).show()
                     }
-                   etLocation.text.isNullOrEmpty() -> {
+                    binding.etLocation.text.isNullOrEmpty() -> {
                         Toast.makeText(
                             this, "Please enter location", Toast.LENGTH_SHORT
                         ).show()
@@ -297,11 +270,12 @@ class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
                     else -> {
                         val placeModel = PlaceModel(
                             if (placeId > 0) placeId else 0,
-                            etTitle.text.toString(),
+                            userViewModel.getLoggedInUserId(),
+                            binding.etTitle.text.toString(),
                             savedImage.toString(),
-                            etDescription.text.toString(),
-                            etDate.text.toString(),
-                            etLocation.text.toString(),
+                            binding.etDescription.text.toString(),
+                            binding.etDate.text.toString(),
+                            binding.etLocation.text.toString(),
                             latitude,
                             longitude
                         )
@@ -310,6 +284,9 @@ class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
                             val updatePlace = placeViewModel.updatePlace(placeModel)
 
                             if (updatePlace > 0) {
+                                Toast.makeText(
+                                    this, "Place updated successfully!", Toast.LENGTH_SHORT
+                                ).show()
                                 setResult(Activity.RESULT_OK)
                                 finish()
                             }
@@ -317,6 +294,9 @@ class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
                             val addPlace = placeViewModel.addPlace(placeModel)
 
                             if (addPlace > 0) {
+                                Toast.makeText(
+                                    this, "Place created successfully!", Toast.LENGTH_SHORT
+                                ).show()
                                 setResult(Activity.RESULT_OK) // 2. handle the result
                                 finish()
                             }
@@ -352,7 +332,6 @@ class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
             }
         }
     }
-
 
     @Throws(IOException::class)
     private fun createImageFile(): File {
@@ -407,7 +386,7 @@ class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
     private fun updateDateInView() {
         val format = "dd.MM.yyyy"
         val sdf = SimpleDateFormat(format, Locale.getDefault())
-        etDate.setText(sdf.format(calendar.time))
+        binding.etDate.setText(sdf.format(calendar.time))
     }
 
     private fun saveImageToInternalStorage(bitmap: Bitmap): Uri {
@@ -423,11 +402,12 @@ class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
         } catch (e: IOException) {
             e.printStackTrace()
         }
-        return  Uri.parse(file.absolutePath)
+        return Uri.parse(file.absolutePath)
     }
 
     private fun isLocationEnabled(): Boolean {
-        val locationManager: LocationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val locationManager: LocationManager =
+            getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
                 || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
@@ -447,7 +427,7 @@ class AddPlaceActivity : AppCompatActivity(), View.OnClickListener {
 
                     if (addresses!!.isNotEmpty()) {
                         val address = addresses[0]
-                        etLocation.setText(address.getAddressLine(0))
+                        binding.etLocation.setText(address.getAddressLine(0))
                     }
                 }
             }

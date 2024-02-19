@@ -8,16 +8,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.memorylane.R
 import com.example.memorylane.activities.AddPlaceActivity
 import com.example.memorylane.models.PlaceModel
-import com.example.memorylane.utils.SwipeToEditCallback
 import com.example.memorylane.viewmodels.PlaceViewModel
 import de.hdodenhof.circleimageview.CircleImageView
-import kotlin.coroutines.coroutineContext
 
 class PlaceAdapter(
     private val context: Context,

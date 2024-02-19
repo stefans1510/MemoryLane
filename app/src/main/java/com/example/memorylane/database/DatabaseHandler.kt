@@ -12,13 +12,14 @@ import com.example.memorylane.models.UserModel
 
 class DatabaseHandler(context: Context): SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     companion object {
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 2
         private const val DATABASE_NAME = "MemoryLaneDatabase"
         private const val TABLE_PLACE = "PlaceTable"
         private const val TABLE_USER = "UserTable"
 
         //places table columns
         private const val ID = "id"
+        private const val CREATOR_ID = "creator_id"
         private const val TITLE = "title"
         private const val IMAGE = "image"
         private const val DESCRIPTION = "description"
@@ -37,6 +38,7 @@ class DatabaseHandler(context: Context): SQLiteOpenHelper(context, DATABASE_NAME
     override fun onCreate(db: SQLiteDatabase?) {
         val createPlaceTable = ("CREATE TABLE " + TABLE_PLACE + " ("
                 + ID + " INTEGER PRIMARY KEY,"
+                + CREATOR_ID + " INTEGER,"
                 + TITLE + " TEXT,"
                 + IMAGE + " TEXT,"
                 + DESCRIPTION + " TEXT,"
@@ -49,7 +51,7 @@ class DatabaseHandler(context: Context): SQLiteOpenHelper(context, DATABASE_NAME
         val createUserTable = ("CREATE TABLE " + TABLE_USER + " ("
                 + USER_ID + " INTEGER PRIMARY KEY,"
                 + NAME + " TEXT,"
-                + EMAIL + " TEXT,"
+                + EMAIL + " TEXT UNIQUE,"
                 + PASSWORD + " TEXT)")
         db?.execSQL(createUserTable)
     }
@@ -64,6 +66,7 @@ class DatabaseHandler(context: Context): SQLiteOpenHelper(context, DATABASE_NAME
         val db = this.writableDatabase
 
         val contentValues = ContentValues()
+        contentValues.put(CREATOR_ID, place.creatorId)
         contentValues.put(TITLE, place.title)
         contentValues.put(IMAGE, place.image)
         contentValues.put(DESCRIPTION, place.description)
@@ -106,30 +109,31 @@ class DatabaseHandler(context: Context): SQLiteOpenHelper(context, DATABASE_NAME
     }
 
     @SuppressLint("Range")
-    fun getPlacesList(): ArrayList<PlaceModel> {
+    fun getPlacesList(userId: Int): ArrayList<PlaceModel> {
         val placesList = ArrayList<PlaceModel>()
-        val selectQuery = "SELECT * FROM $TABLE_PLACE"
+        val selectQuery = "SELECT * FROM $TABLE_PLACE WHERE $CREATOR_ID = ?"
         val db = this.readableDatabase
 
         try {
-            val cursor: Cursor = db.rawQuery(selectQuery, null)
-
-            if (cursor.moveToFirst()) {
-                do {
-                    val place = PlaceModel(
-                        cursor.getInt(cursor.getColumnIndex(ID)),
-                        cursor.getString(cursor.getColumnIndex(TITLE)),
-                        cursor.getString(cursor.getColumnIndex(IMAGE)),
-                        cursor.getString(cursor.getColumnIndex(DESCRIPTION)),
-                        cursor.getString(cursor.getColumnIndex(DATE)),
-                        cursor.getString(cursor.getColumnIndex(LOCATION)),
-                        cursor.getDouble(cursor.getColumnIndex(LATITUDE)),
-                        cursor.getDouble(cursor.getColumnIndex(LONGITUDE))
-                    )
-                    placesList.add(place)
-                } while (cursor.moveToNext())
+            val cursor: Cursor = db.rawQuery(selectQuery, arrayOf(userId.toString()))
+            cursor.use { c ->
+                if (cursor.moveToFirst()) {
+                    do {
+                        val place = PlaceModel(
+                            c.getInt(c.getColumnIndex(ID)),
+                            c.getInt(c.getColumnIndex(CREATOR_ID)),
+                            c.getString(c.getColumnIndex(TITLE)),
+                            c.getString(c.getColumnIndex(IMAGE)),
+                            c.getString(c.getColumnIndex(DESCRIPTION)),
+                            c.getString(c.getColumnIndex(DATE)),
+                            c.getString(c.getColumnIndex(LOCATION)),
+                            c.getDouble(c.getColumnIndex(LATITUDE)),
+                            c.getDouble(c.getColumnIndex(LONGITUDE))
+                        )
+                        placesList.add(place)
+                    } while (c.moveToNext())
+                }
             }
-            cursor.close()
         } catch (e: SQLiteException) {
             db.execSQL(selectQuery)
             return ArrayList()
@@ -149,6 +153,7 @@ class DatabaseHandler(context: Context): SQLiteOpenHelper(context, DATABASE_NAME
             if (c.moveToFirst()) {
                 place = PlaceModel(
                     c.getInt(c.getColumnIndex(ID)),
+                    c.getInt(c.getColumnIndex(CREATOR_ID)),
                     c.getString(c.getColumnIndex(TITLE)),
                     c.getString(c.getColumnIndex(IMAGE)),
                     c.getString(c.getColumnIndex(DESCRIPTION)),
@@ -159,49 +164,65 @@ class DatabaseHandler(context: Context): SQLiteOpenHelper(context, DATABASE_NAME
                 )
             }
         }
+
         return place
     }
 
-    /*fun addUser(user: UserModel): Long {
-    val db = this.writableDatabase
+    fun createUser(user: UserModel): Long {
+        val db = this.writableDatabase
 
-    val contentValues = ContentValues()
-    contentValues.put(NAME, user.name)
-    contentValues.put(EMAIL, user.email)
-    contentValues.put(PASSWORD, user.password)
+        val contentValues = ContentValues()
+        contentValues.put(NAME, user.name)
+        contentValues.put(EMAIL, user.email)
+        contentValues.put(PASSWORD, user.password)
 
-    val result = db.insert(TABLE_USER, null, contentValues)
+        val result = db.insert(TABLE_USER, null, contentValues)
 
-    db.close()
-    return result
+        db.close()
+        return result
     }
 
+    // Inside DatabaseHandler class
     @SuppressLint("Range")
-    fun getUsersList(): ArrayList<UserModel> {
-        val usersList = ArrayList<UserModel>()
-        val selectQuery = "SELECT * FROM $TABLE_USER"
+    fun getUserById(userId: Int): UserModel? {
         val db = this.readableDatabase
+        var user: UserModel? = null
+        val selectQuery = "SELECT * FROM $TABLE_USER WHERE $USER_ID = $userId"
 
-        try {
-            val cursor: Cursor = db.rawQuery(selectQuery, null)
-
-            if (cursor.moveToFirst()) {
-                do {
-                    val user = UserModel(
-                        cursor.getInt(cursor.getColumnIndex(USER_ID)),
-                        cursor.getString(cursor.getColumnIndex(NAME)),
-                        cursor.getString(cursor.getColumnIndex(EMAIL)),
-                        cursor.getString(cursor.getColumnIndex(PASSWORD))
-                    )
-                    usersList.add(user)
-                } while (cursor.moveToNext())
+        val cursor: Cursor = db.rawQuery(selectQuery, null)
+        cursor.use { c ->
+            if (c.moveToFirst()) {
+                user = UserModel(
+                    c.getInt(c.getColumnIndex(USER_ID)),
+                    c.getString(c.getColumnIndex(NAME)),
+                    c.getString(c.getColumnIndex(EMAIL)),
+                    c.getString(c.getColumnIndex(PASSWORD))
+                )
             }
-            cursor.close()
-        } catch (e: SQLiteException) {
-            db.execSQL(selectQuery)
-            return ArrayList()
         }
 
-        return usersList
-    }*/
+        return user
+    }
+
+
+    @SuppressLint("Range")
+    fun getUserByEmail(email: String): UserModel? {
+        val db = this.readableDatabase
+        var user: UserModel? = null
+        val selectQuery = "SELECT * FROM $TABLE_USER WHERE $EMAIL = ?"
+
+        val cursor: Cursor = db.rawQuery(selectQuery, arrayOf(email))
+        cursor.use { c ->
+            if (c.moveToFirst()) {
+                user = UserModel(
+                    c.getInt(c.getColumnIndex(USER_ID)),
+                    c.getString(c.getColumnIndex(NAME)),
+                    c.getString(c.getColumnIndex(EMAIL)),
+                    c.getString(c.getColumnIndex(PASSWORD))
+                )
+            }
+        }
+
+        return user
+    }
 }

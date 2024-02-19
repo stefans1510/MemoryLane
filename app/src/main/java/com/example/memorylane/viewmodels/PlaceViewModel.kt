@@ -8,9 +8,12 @@ import com.example.memorylane.models.PlaceModel
 
 class PlaceViewModel(application: Application) : AndroidViewModel(application) {
     private val dbHandler: DatabaseHandler = DatabaseHandler(application)
+    private val userViewModel: UserViewModel = UserViewModel(application)
 
     fun getPLacesList(): ArrayList<PlaceModel> {
-        return dbHandler.getPlacesList()
+        val placesList = dbHandler.getPlacesList(userViewModel.getLoggedInUserId())
+        Log.d("PlaceViewModel", "Places List: $placesList")
+        return placesList
     }
 
     fun getPlaceById(placeId: Int): PlaceModel? {

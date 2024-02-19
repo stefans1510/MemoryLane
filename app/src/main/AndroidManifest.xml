@@ -9,8 +9,8 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:allowBackup="true"
@@ -23,11 +23,23 @@
         android:theme="@style/Theme.MemoryLane"
         tools:targetApi="31">
         <activity
+            android:name=".activities.UserDetailsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.SignInActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".activities.MapActivity"
             android:exported="false"
             android:label="PLACE MAP"
             android:screenOrientation="portrait"
-            android:theme="@style/Base.Theme.MemoryLane"/>
+            android:theme="@style/Base.Theme.MemoryLane" />
         <!--
              TODO: Before you run your application, you need a Google Maps API key.
 
@@ -47,7 +59,7 @@
             android:name=".activities.PlaceDetailsActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/Base.Theme.MemoryLane"/>
+            android:theme="@style/Base.Theme.MemoryLane" />
         <activity
             android:name=".activities.AddPlaceActivity"
             android:exported="false"
@@ -56,13 +68,9 @@
             android:theme="@style/Base.Theme.MemoryLane" />
         <activity
             android:name=".activities.MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Base.Theme.MemoryLane"></activity>
 
         <provider
             android:name="androidx.core.content.FileProvider"
