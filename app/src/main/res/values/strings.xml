@@ -18,4 +18,7 @@
 
     <string name="google_maps_api_key"></string>
     <string name="place_actions">Place Actions</string>
+    <string name="sign_up_link">SIGN UP</string>
+    <string name="sign_in_link">SIGN IN</string>
+    <string name="go_to_profile">Go to profile</string>
 </resources>
